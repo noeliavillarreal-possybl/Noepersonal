@@ -190,8 +190,26 @@ details[open] summary{margin-bottom:6px}
 .pat-alert{font-size:12px;font-weight:700;padding:3px 10px;border-radius:99px}
 .home-add{width:100%;padding:14px;border:2px dashed #D1D5DB;border-radius:12px;background:transparent;font-size:14px;font-weight:600;color:var(--mut);cursor:pointer;transition:all .15s;margin-top:4px}
 .home-add:hover{border-color:var(--p);color:var(--p);background:var(--pl)}
-/* ── BACK BUTTON ─────────────────────────────────────────── */
-.back-btn{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:8px;padding:6px 10px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:4px}
+/* ── PROFILE READ VIEW ───────────────────────────────────── */
+.pv-section{background:#fff;border-radius:12px;padding:15px 16px;margin-bottom:10px;border:1px solid var(--brd);box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.pv-section-hdr{display:flex;align-items:center;gap:7px;margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid #F3F4F6}
+.pv-row{display:flex;gap:8px;margin-bottom:7px;font-size:14px;line-height:1.4}
+.pv-row:last-child{margin-bottom:0}
+.pv-label{color:var(--mut);font-size:12px;flex-shrink:0;width:110px;padding-top:1px}
+.pv-val{color:var(--txt);font-weight:500;flex:1}
+.pv-tag{display:inline-block;background:#FEF2F2;color:#DC2626;border-radius:6px;padding:2px 9px;font-size:12px;font-weight:600;margin-right:5px;margin-bottom:4px}
+.pv-tag.warn{background:var(--warnl);color:#D97706}
+/* ── INVENTORY SUMMARY ───────────────────────────────────── */
+.inv-summary{margin-bottom:16px}
+.inv-summary-title{font-size:12px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.4px;margin-bottom:9px}
+.inv-summary-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.inv-chip{border-radius:10px;padding:11px 12px;border:1px solid;cursor:pointer;transition:transform .15s}
+.inv-chip:hover{transform:translateY(-1px)}
+.inv-chip-drug{font-size:12px;font-weight:700;color:var(--txt);margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.inv-chip-days{font-size:22px;font-weight:800;line-height:1;margin-bottom:5px}
+.inv-chip-bar{height:5px;border-radius:99px;background:#E5E7EB;margin-bottom:5px;overflow:hidden}
+.inv-chip-fill{height:100%;border-radius:99px;transition:width .4s}
+.inv-chip-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
 
 @media(max-width:480px){
   .igrd{grid-template-columns:1fr 1fr}
@@ -226,6 +244,7 @@ const S = {
   patients:[], medications:[], inventory:[],
   sel:null, tab:'perfil', view:'loading',
   sync:'idle',
+  profileEdit: false,
   cfg:{ url:'', email:'', email2:'', notif:false },
 };
 
@@ -454,7 +473,7 @@ function buildTabs(){
 
 function buildNew(){return`
   <div class="hbx">👋 Completá los datos del paciente. Podés ir completando de a poco.</div>
-  ${buildPerfil(null)}`;
+  ${buildPerfilForm({})}`;
 }
 
 function buildTab(){
@@ -467,11 +486,89 @@ function buildTab(){
 // ══════════════════════════════════════════════════════════
 // PERFIL TAB
 // ══════════════════════════════════════════════════════════
+
+// Dispatcher: read vs edit
 function buildPerfil(p){
+  if(!p) return buildPerfilForm({}); // new patient → always form
+  if(S.profileEdit) return buildPerfilForm(p);
+  return buildPerfilView(p);
+}
+
+// ── READ VIEW ──────────────────────────────────────────────
+function buildPerfilView(p){
+  const a=age(p.dob);
+  const row=(lbl,val)=>val?`<div class="pv-row"><span class="pv-label">${lbl}</span><span class="pv-val">${esc(String(val))}</span></div>`:'';
+  const dniExp=p.dniExp?`${fmt(p.dniExp)}${new Date(p.dniExp)<new Date()?` <span style="color:#DC2626;font-size:11px;font-weight:700">VENCIDO</span>`:''}`:null;
+
+  const personal=[
+    row('Nombre', p.name),
+    row('Fecha de nac.', p.dob?`${fmt(p.dob)}${a?' ('+a+' años)':''}`:null),
+    row('DNI', p.dni),
+    row('CUIL', p.cuil),
+    row('Vto. DNI', dniExp),
+    row('Teléfono', p.phone),
+    row('Email', p.email),
+  ].filter(Boolean).join('');
+
+  const facility=[
+    row('Establecimiento', p.facName),
+    row('Dirección', p.facAddr),
+    row('Teléfono', p.facPhone),
+    row('Médico', p.facDoc),
+  ].filter(Boolean).join('');
+
+  const insurance=[
+    row('Obra social', p.ins),
+    row('Plan', p.insPlan),
+    row('Afiliado', p.insAff),
+    row('Credencial', p.insCred),
+  ].filter(Boolean).join('');
+
+  const clinical=[
+    row('Grupo sanguíneo', p.blood),
+    p.allergies?`<div class="pv-row"><span class="pv-label">Alergias</span><span class="pv-val"><span class="pv-tag">${esc(p.allergies).replace(/,\s*/g,'</span><span class="pv-tag">')}</span></span></div>`:'',
+    p.chronic?`<div class="pv-row"><span class="pv-label">Diagnósticos</span><span class="pv-val">${esc(p.chronic)}</span></div>`:'',
+    p.contras?`<div class="pv-row"><span class="pv-label" style="color:#DC2626">Contraindicados</span><span class="pv-val"><span class="pv-tag">${esc(p.contras).replace(/,\s*/g,'</span><span class="pv-tag">')}</span></span></div>`:'',
+  ].filter(Boolean).join('');
+
+  const emergency=[
+    row('Nombre', p.emName+(p.emRel?' ('+p.emRel+')':'')),
+    row('Teléfono', p.emPhone),
+  ].filter(Boolean).join('');
+
+  function section(icon,title,content){
+    if(!content) return '';
+    return`<div class="pv-section"><div class="pv-section-hdr"><span>${icon}</span><span class="ct">${title}</span></div>${content}</div>`;
+  }
+
+  const isEmpty=!p.name&&!p.dob&&!p.dni;
+
+  return`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div>
+        <div style="font-size:20px;font-weight:800;color:var(--txt)">${esc(p.name||'Sin nombre')}</div>
+        ${a?`<div style="font-size:13px;color:var(--mut);margin-top:2px">${a} años${p.blood?' · '+p.blood:''}</div>`:''}
+      </div>
+      <button class="btn bp bsm" onclick="S.profileEdit=true;render()">✏️ Editar</button>
+    </div>
+    ${isEmpty?`<div class="emp"><div class="ei">👤</div><p class="et">Perfil vacío</p><p class="es">Completá los datos del paciente</p><button class="btn bp bsm" onclick="S.profileEdit=true;render()">✏️ Completar perfil</button></div>`:''}
+    ${section('👤','Datos personales',personal)}
+    ${section('🏥','Residencia / Centro de cuidado',facility)}
+    ${section('🪪','Cobertura médica',insurance)}
+    ${section('🩺','Datos clínicos',clinical)}
+    ${section('🚨','Contacto de emergencia',emergency)}
+    ${p.notes?`<div class="pv-section"><div class="pv-section-hdr"><span>📝</span><span class="ct">Notas generales</span></div><p style="font-size:14px;color:var(--txt);line-height:1.6;white-space:pre-wrap">${esc(p.notes)}</p></div>`:''}
+  `;
+}
+
+// ── EDIT FORM ──────────────────────────────────────────────
+function buildPerfilForm(p){
   p=p||{};
   const a=age(p.dob);
   const bloodSel=BLOOD.map(bt=>`<option value="${bt}" ${bt===p.blood?'selected':''}>${bt}</option>`).join('');
+  const isEdit=!!p.id;
   return`<form id="pf" onsubmit="savePerfil(event)">
+    ${isEdit?`<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button type="button" class="btn bs bsm" onclick="S.profileEdit=false;render()">← Cancelar</button></div>`:''}
     <div class="card">
       <div class="ch"><span>👤</span><span class="ct">Datos personales</span></div>
       <div class="g2">
@@ -555,6 +652,25 @@ function mCard(m){return`<div class="mc ${m.on?'':'arc'}">
 // ══════════════════════════════════════════════════════════
 // INVENTARIO TAB
 // ══════════════════════════════════════════════════════════
+function buildInvSummary(ms){
+  if(ms.length===0)return'';
+  const chips=ms.map(m=>{
+    const inv=latInv(m.id),d=daysLeft(inv,m),l=lvl(d),c=SC[l];
+    const pct=d==null?0:Math.min(100,Math.max(2,(d/30)*100));
+    const shortName=m.drug.length>14?m.drug.slice(0,13)+'…':m.drug;
+    return`<div class="inv-chip" style="background:${c.bg};border-color:${c.bd}" onclick="document.getElementById('ic-${m.id}')?.scrollIntoView({behavior:'smooth',block:'center'})">
+      <div class="inv-chip-drug" style="color:${c.tx}" title="${esc(m.drug)}">${esc(shortName)}</div>
+      <div class="inv-chip-days" style="color:${c.tx}">${d==null?'?':d}</div>
+      <div class="inv-chip-bar"><div class="inv-chip-fill" style="width:${pct}%;background:${c.bar}"></div></div>
+      <div class="inv-chip-label" style="color:${c.tx}">${d==null?'sin datos':d===0?'agotado':d===1?'1 día':'días'}</div>
+    </div>`;
+  }).join('');
+  return`<div class="inv-summary">
+    <div class="inv-summary-title">Resumen rápido</div>
+    <div class="inv-summary-grid">${chips}</div>
+  </div>`;
+}
+
 function buildInv(){
   const ms=pMeds().filter(m=>m.on);
   const alerts=ms.map(m=>{const inv=latInv(m.id),d=daysLeft(inv,m),l=lvl(d);return{m,inv,d,l}}).filter(a=>a.l==='critical'||a.l==='warning').sort((a,b)=>(a.d??999)-(b.d??999));
@@ -569,7 +685,7 @@ function buildInv(){
       </div>
     </div>`;
   if(ms.length===0)return`<div class="emp"><div class="ei">📦</div><p class="et">Sin medicamentos activos</p><p class="es">Agregá medicamentos en la pestaña correspondiente</p><button class="btn bp bsm" onclick="setTab('medicamentos')">Ir a Medicamentos</button></div>`;
-  return aHtml+ms.map(m=>invCard(m)).join('');
+  return buildInvSummary(ms)+aHtml+ms.map(m=>invCard(m)).join('');
 }
 
 function invCard(m){
@@ -578,7 +694,7 @@ function invCard(m){
   const ro=d!=null&&d>0?addD(today(),d):null;
   const bb=d!=null?addD(today(),Math.max(0,d-5)):null;
   const hist=S.inventory.filter(i=>i.mid===m.id&&i.pid===S.sel).sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5);
-  return`<div class="ic" style="border:1px solid ${c.bd}">
+  return`<div class="ic" id="ic-${m.id}" style="border:1px solid ${c.bd}">
     <div class="istr" style="background:${c.bar}"></div>
     <div class="ibdy">
       <div class="itop">
@@ -823,7 +939,7 @@ function cpCode(){navigator.clipboard.writeText(AS_CODE).then(()=>toast('Código
 function setTab(id){S.tab=id;render()}
 function setTab2(id){S.tab=id;render()}
 function selPat(id){S.sel=id;S.tab='perfil';S.view='patient';render()}
-function enterPatient(id){S.sel=id;S.tab='perfil';S.view='patient';render()}
+function enterPatient(id){S.sel=id;S.tab='perfil';S.view='patient';S.profileEdit=false;render()}
 function goHome(){S.view='home';render()}
 function goAjustes(){S.view='ajustes';render()}
 function startNew(){S.view='new';render()}
@@ -834,8 +950,8 @@ function updAge(inp){const a=age(inp.value);const n=inp.parentElement.querySelec
 function savePerfil(e){
   e.preventDefault();
   const fd={};new FormData(e.target).forEach((v,k)=>fd[k]=v.trim());
-  if(S.view==='new'){const np={...fd,id:uid()};S.patients.push(np);S.sel=np.id;S.view='patient';S.tab='medicamentos';toast('Paciente creado ✓');}
-  else{S.patients=S.patients.map(p=>p.id===S.sel?{...p,...fd}:p);toast('Perfil guardado ✓');}
+  if(S.view==='new'){const np={...fd,id:uid()};S.patients.push(np);S.sel=np.id;S.view='patient';S.tab='medicamentos';S.profileEdit=false;toast('Paciente creado ✓');}
+  else{S.patients=S.patients.map(p=>p.id===S.sel?{...p,...fd}:p);S.profileEdit=false;toast('Perfil guardado ✓');}
   save();render();
 }
 
