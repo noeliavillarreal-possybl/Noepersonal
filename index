@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Botiquín">
+<meta name="theme-color" content="#00836a">
+<title>Botiquín</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px;height:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#EEF2F7;color:#111827;min-height:100vh;min-height:100dvh}
+input,select,textarea,button{font-family:inherit;font-size:inherit}
+button{cursor:pointer}
+:root{
+  --p:#00836a;--pl:#E0F4F1;--bg:#EEF2F7;--sur:#fff;
+  --txt:#111827;--mut:#6B7280;--brd:#E5EAF0;
+  --crit:#EF4444;--critl:#FEF2F2;
+  --warn:#F59E0B;--warnl:#FFFBEB;
+  --ok:#22C55E;--okl:#F0FDF4;
+}
+
+/* ── LAYOUT ─────────────────────────────────────────────── */
+#app{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
+.hdr{background:var(--p);padding:11px 14px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.2);position:sticky;top:0;z-index:200;flex-shrink:0}
+.hdr-l{display:flex;align-items:center;gap:8px}
+.logo{color:#fff;font-size:17px;font-weight:800;letter-spacing:-.3px}
+.hdr-r{display:flex;align-items:center;gap:6px}
+.hbtn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:8px;padding:6px 11px;font-size:12px;font-weight:600}
+.hsel{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:8px;padding:6px 9px;font-size:12px;max-width:130px}
+.hsel option{color:#111;background:#fff}
+
+/* ── SYNC DOT ────────────────────────────────────────────── */
+.sdot{width:7px;height:7px;border-radius:50%;display:inline-block}
+.sdot.idle{background:rgba(255,255,255,.3)}
+.sdot.syncing{background:#FCD34D;animation:blink 1s infinite}
+.sdot.synced{background:#4ADE80}
+.sdot.error{background:#FCA5A5}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── TABS ────────────────────────────────────────────────── */
+.tabs{background:#fff;border-bottom:1px solid var(--brd);position:sticky;top:48px;z-index:100;display:flex;overflow-x:auto;scrollbar-width:none;flex-shrink:0}
+.tabs::-webkit-scrollbar{display:none}
+.tbtn{flex:1;min-width:72px;padding:11px 6px;border:none;background:transparent;font-size:13px;font-weight:500;color:var(--mut);border-bottom:2px solid transparent;white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:4px;transition:color .15s,border-color .15s}
+.tbtn.on{font-weight:700;color:var(--p);border-bottom-color:var(--p)}
+.bdg{background:var(--crit);color:#fff;font-size:9px;font-weight:800;border-radius:99px;padding:1px 5px;line-height:1.5}
+
+/* ── CONTENT ─────────────────────────────────────────────── */
+.cnt{max-width:680px;margin:0 auto;padding:14px 13px 48px;width:100%;flex:1}
+
+/* ── CARDS ───────────────────────────────────────────────── */
+.card{background:#fff;border-radius:12px;padding:16px;margin-bottom:12px;border:1px solid var(--brd);box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.ch{display:flex;align-items:center;gap:7px;margin-bottom:13px;padding-bottom:10px;border-bottom:2px solid #E5F0EE}
+.ct{font-size:12px;font-weight:700;color:var(--p);text-transform:uppercase;letter-spacing:.4px}
+
+/* ── FORM ────────────────────────────────────────────────── */
+.fld{margin-bottom:13px}
+.lbl{display:block;font-size:11px;font-weight:700;color:#374151;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+.req{color:var(--crit);margin-left:2px}
+.inp,.sel,.txt{width:100%;padding:10px 12px;border:1px solid #D1D5DB;border-radius:8px;font-size:15px;color:var(--txt);background:#fff;outline:none;transition:border-color .15s,box-shadow .15s;-webkit-appearance:none;appearance:none}
+.inp:focus,.sel:focus,.txt:focus{border-color:var(--p);box-shadow:0 0 0 3px rgba(27,107,90,.1)}
+.txt{min-height:68px;resize:vertical;line-height:1.5}
+.hint{font-size:11px;color:#9CA3AF;margin-top:4px;line-height:1.4}
+.fnote{font-size:12px;color:var(--p);font-weight:600;margin-top:5px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:0 11px}
+.cf{grid-column:1/-1}
+
+/* ── BUTTONS ─────────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;border:none;border-radius:8px;font-weight:600;line-height:1;transition:opacity .15s;white-space:nowrap;font-size:14px;padding:10px 15px}
+.btn:hover:not(:disabled){opacity:.85}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.bp{background:var(--p);color:#fff}
+.bs{background:#F3F4F6;color:#374151;border:1px solid #D1D5DB}
+.bd{background:var(--critl);color:#DC2626;border:1px solid #FCA5A5}
+.bsm{padding:7px 11px;font-size:13px}
+.blg{padding:12px 22px;font-size:15px}
+.bwa{background:#25D366;color:#fff;padding:8px 12px;font-size:13px}
+.bml{background:#3B82F6;color:#fff;padding:8px 12px;font-size:13px}
+
+/* ── MED CARD ────────────────────────────────────────────── */
+.mc{background:#fff;border-radius:10px;padding:12px 14px;border:1px solid var(--brd);display:flex;align-items:flex-start;gap:10px;box-shadow:0 1px 2px rgba(0,0,0,.04);margin-bottom:8px}
+.mc.arc{opacity:.6;background:#F9FAFB}
+.mi{width:36px;height:36px;border-radius:9px;background:var(--pl);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.mn{font-weight:700;font-size:14px}
+.ms{font-size:12px;color:var(--mut);margin-top:2px}
+.ma{display:flex;gap:4px;flex-shrink:0}
+.ib{background:#F3F4F6;border:none;border-radius:7px;padding:6px 8px;font-size:13px}
+.ib:hover{opacity:.75}
+.ib.d{background:var(--critl);color:#DC2626}
+
+/* ── INV CARD ────────────────────────────────────────────── */
+.ic{background:#fff;border-radius:12px;overflow:hidden;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.istr{height:5px}
+.ibdy{padding:13px 15px}
+.itop{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px}
+.stag{font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;flex-shrink:0}
+
+/* ── CAPSULE BAR ─────────────────────────────────────────── */
+.crow{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.clbl{font-size:11px;color:var(--mut);flex-shrink:0}
+.ctrk{flex:1;height:12px;background:#F3F4F6;border-radius:99px;overflow:hidden}
+.cfil{height:100%;border-radius:99px;transition:width .5s ease}
+.cday{font-size:13px;font-weight:800;min-width:44px;text-align:right;flex-shrink:0}
+
+/* ── INFO BOXES ──────────────────────────────────────────── */
+.igrd{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px}
+.ibox{padding:7px 8px;border-radius:7px;background:#F9FAFB;border:1px solid #E5E7EB}
+.ibox.w{background:var(--warnl);border-color:#FCD34D}
+.ibox.cr{background:var(--critl);border-color:#FCA5A5}
+.ilbl{font-size:9px;color:#9CA3AF;text-transform:uppercase;letter-spacing:.3px;margin-bottom:2px}
+.ival{font-size:12px;font-weight:700;color:#374151}
+.ival.w{color:#D97706}.ival.cr{color:#DC2626}
+
+/* ── HISTORY ─────────────────────────────────────────────── */
+details summary{cursor:pointer;font-size:11px;color:#9CA3AF;user-select:none;list-style:none;padding:3px 0}
+details summary::-webkit-details-marker{display:none}
+details summary::before{content:"▶ ";font-size:8px}
+details[open] summary::before{content:"▼ "}
+details[open] summary{margin-bottom:6px}
+.hr{display:flex;gap:7px;align-items:center;padding:5px 8px;background:#F9FAFB;border-radius:6px;font-size:11px;color:var(--mut);margin-bottom:3px}
+.hrd{font-weight:600;color:#374151}
+.hrl{margin-left:auto;color:var(--p);font-weight:600}
+
+/* ── ALERT BANNER ────────────────────────────────────────── */
+.ab{border-radius:12px;padding:13px 15px;margin-bottom:13px;border:1px solid}
+.ab.cr{background:var(--critl);border-color:#FCA5A5}
+.ab.w{background:var(--warnl);border-color:#FCD34D}
+.at{font-weight:700;font-size:14px;margin-bottom:7px}
+.at.cr{color:#DC2626}.at.w{color:#D97706}
+.ae{font-size:13px;color:#374151;margin-bottom:4px}
+.aa{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+
+/* ── EMPTY ───────────────────────────────────────────────── */
+.emp{background:#fff;border-radius:12px;padding:36px 18px;text-align:center;border:2px dashed #D1D5DB}
+.ei{font-size:38px;margin-bottom:9px}
+.et{font-size:14px;color:var(--mut);margin-bottom:3px}
+.es{font-size:12px;color:#9CA3AF;margin-bottom:14px}
+
+/* ── MODAL ───────────────────────────────────────────────── */
+.ovl{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;z-index:500;padding:12px}
+@media(min-width:600px){.ovl{align-items:center}}
+.mdl{background:#fff;border-radius:16px 16px 10px 10px;width:100%;max-width:490px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+@media(min-width:600px){.mdl{border-radius:16px}}
+.mhdr{display:flex;align-items:center;justify-content:space-between;padding:15px 17px;border-bottom:1px solid #E5E7EB;position:sticky;top:0;background:#fff;z-index:1}
+.mtl{font-size:15px;font-weight:700}
+.mcl{background:#F3F4F6;border:none;border-radius:7px;width:28px;height:28px;font-size:15px;display:flex;align-items:center;justify-content:center}
+.mbdy{padding:16px}
+.mft{display:flex;gap:7px;justify-content:flex-end;margin-top:13px}
+
+/* ── WELCOME ─────────────────────────────────────────────── */
+.ww{display:flex;align-items:center;justify-content:center;flex:1;padding:36px 14px}
+.wc{background:#fff;border-radius:18px;padding:36px 24px;text-align:center;max-width:320px;width:100%;box-shadow:0 4px 24px rgba(0,0,0,.1)}
+
+/* ── CODE BLOCK ──────────────────────────────────────────── */
+.cb{background:#1A2332;color:#E2E8F0;padding:11px 13px;border-radius:8px;font-family:'Courier New',monospace;font-size:11px;line-height:1.6;overflow-x:auto;margin:7px 0;white-space:pre;position:relative}
+.cpcb{position:absolute;top:6px;right:6px;background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:5px;padding:3px 8px;font-size:10px;cursor:pointer}
+
+/* ── SETUP STEPS ─────────────────────────────────────────── */
+.ss{background:#fff;border-radius:10px;padding:14px;margin-bottom:10px;border:1px solid var(--brd)}
+.snum{width:26px;height:26px;border-radius:50%;background:var(--p);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sr{display:flex;align-items:flex-start;gap:11px}
+
+/* ── TOAST ───────────────────────────────────────────────── */
+.tst{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#1A2332;color:#fff;padding:9px 17px;border-radius:8px;font-size:13px;font-weight:600;z-index:1000;box-shadow:0 4px 12px rgba(0,0,0,.25);animation:fu .2s ease;white-space:nowrap;pointer-events:none}
+@keyframes fu{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+/* ── MISC ────────────────────────────────────────────────── */
+.sr2{display:flex;justify-content:flex-end;padding-bottom:8px}
+.hbx{background:var(--pl);border:1px solid #86EFAC;border-radius:8px;padding:9px 12px;font-size:13px;color:#15803D;line-height:1.5;margin-bottom:13px}
+.arc-bdg{font-size:10px;background:#F3F4F6;color:#9CA3AF;padding:1px 6px;border-radius:99px;font-weight:700;vertical-align:middle;margin-left:5px}
+.age-n{font-size:11px;color:var(--mut);margin-top:4px}
+
+/* ── HOME SCREEN ─────────────────────────────────────────── */
+.home-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.home-title{font-size:22px;font-weight:800;color:var(--txt)}
+.home-sub{font-size:13px;color:var(--mut);margin-top:2px}
+.pat-card{background:#fff;border-radius:14px;overflow:hidden;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.08);border:1px solid var(--brd);cursor:pointer;transition:transform .15s,box-shadow .15s;display:block;width:100%;text-align:left}
+.pat-card:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(0,0,0,.12)}
+.pat-card:active{transform:translateY(0)}
+.pat-card-top{display:flex;align-items:stretch}
+.pat-card-bar{width:5px;flex-shrink:0}
+.pat-card-body{padding:14px 15px;flex:1}
+.pat-card-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.pat-card-name{font-size:18px;font-weight:800;color:var(--txt);margin-bottom:3px}
+.pat-card-info{font-size:12px;color:var(--mut);line-height:1.6}
+.pat-card-arrow{font-size:18px;color:#D1D5DB;align-self:center;flex-shrink:0}
+.pat-card-footer{padding:10px 15px 12px;border-top:1px solid #F3F4F6;display:flex;align-items:center;gap:12px}
+.pat-stat{font-size:12px;color:var(--mut);display:flex;align-items:center;gap:4px}
+.pat-alert{font-size:12px;font-weight:700;padding:3px 10px;border-radius:99px}
+.home-add{width:100%;padding:14px;border:2px dashed #D1D5DB;border-radius:12px;background:transparent;font-size:14px;font-weight:600;color:var(--mut);cursor:pointer;transition:all .15s;margin-top:4px}
+.home-add:hover{border-color:var(--p);color:var(--p);background:var(--pl)}
+/* ── BACK BUTTON ─────────────────────────────────────────── */
+.back-btn{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:8px;padding:6px 10px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:4px}
+
+@media(max-width:480px){
+  .igrd{grid-template-columns:1fr 1fr}
+  .igrd .ibox:last-child{grid-column:1/-1}
+  .g2{grid-template-columns:1fr}
+  .g2 .cf{grid-column:1}
+  .hdr-r .hsel{max-width:100px}
+  .pat-card-name{font-size:16px}
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// ╔══════════════════════════════════════════════════════════╗
+// ║  CONFIGURACIÓN — editá este bloque una sola vez         ║
+// ║  y compartí el archivo. Todos abrirán ya configurado.   ║
+// ╚══════════════════════════════════════════════════════════╝
+const APP_CONFIG = {
+  // Pegá acá la URL de tu Google Apps Script Web App:
+  scriptUrl: 'https://script.google.com/macros/s/AKfycbwAPhEe9KMrI4e00kR_YRVpnxGkFYtKKCQJ60QxoVgaADtIpAC0qIfT8_PI1_QDDWE/exec',
+
+  // Email(s) que reciben las alertas automáticas:
+  alertEmail:  'noeliavillarreal@gmail.com',
+  alertEmail2: '',
+};
+// ════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════
+const S = {
+  patients:[], medications:[], inventory:[],
+  sel:null, tab:'perfil', view:'loading',
+  sync:'idle',
+  cfg:{ url:'', email:'', email2:'', notif:false },
+};
+
+// ══════════════════════════════════════════════════════════
+// CONSTANTS
+// ══════════════════════════════════════════════════════════
+const BLOOD=['A+','A-','B+','B-','AB+','AB-','O+','O-','Desconocido'];
+const UNITS=['comprimidos','cápsulas','gotas','ml','ampollas','parches','sobres','unidades'];
+const FREQS=['1 vez al día','2 veces al día','3 veces al día','Cada 8 horas','Cada 12 horas','Día por medio','1 vez por semana','Según necesidad'];
+const SC={
+  critical:{bg:'#FEF2F2',bd:'#FCA5A5',tx:'#DC2626',bar:'#EF4444',lbl:'🔴 Crítico'},
+  warning: {bg:'#FFFBEB',bd:'#FCD34D',tx:'#D97706',bar:'#F59E0B',lbl:'🟡 Atención'},
+  ok:      {bg:'#F0FDF4',bd:'#86EFAC',tx:'#16A34A',bar:'#22C55E',lbl:'✅ OK'},
+  unknown: {bg:'#F9FAFB',bd:'#E5E7EB',tx:'#9CA3AF',bar:'#D1D5DB',lbl:'Sin datos'},
+};
+
+// ══════════════════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════════════════
+const uid=()=>'id'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+const today=()=>new Date().toISOString().slice(0,10);
+const fmt=iso=>{if(!iso)return'—';const[y,m,d]=iso.split('-');return`${d}/${m}/${y}`};
+const since=iso=>Math.floor((Date.now()-new Date(iso).getTime())/86400000);
+const addD=(iso,n)=>{const d=new Date(iso);d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)};
+const age=dob=>{if(!dob)return null;const t=new Date(),b=new Date(dob);let a=t.getFullYear()-b.getFullYear();if(t<new Date(t.getFullYear(),b.getMonth(),b.getDate()))a--;return a};
+function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+function daysLeft(inv,med){
+  if(!inv||!med||!parseFloat(med.dose))return null;
+  const rem=inv.rem!=null?inv.rem:inv.qty-since(inv.date)*parseFloat(med.dose);
+  return Math.max(0,Math.round(rem/parseFloat(med.dose)));
+}
+const lvl=d=>d==null?'unknown':d<=4?'critical':d<=10?'warning':'ok';
+
+// ══════════════════════════════════════════════════════════
+// STORAGE
+// ══════════════════════════════════════════════════════════
+const LS='mc3', LC='mc3cfg';
+function ldLocal(){
+  try{const r=localStorage.getItem(LS);if(r){const d=JSON.parse(r);S.patients=d.p||[];S.medications=d.m||[];S.inventory=d.i||[];}}catch(e){}
+  // Load saved config from localStorage first, then override with hardcoded values if set
+  try{const c=localStorage.getItem(LC);if(c){const d=JSON.parse(c);S.cfg={...S.cfg,...d};}}catch(e){}
+  if(APP_CONFIG.scriptUrl)  S.cfg.url    = APP_CONFIG.scriptUrl;
+  if(APP_CONFIG.alertEmail) S.cfg.email  = APP_CONFIG.alertEmail;
+  if(APP_CONFIG.alertEmail2)S.cfg.email2 = APP_CONFIG.alertEmail2;
+}
+function svLocal(){localStorage.setItem(LS,JSON.stringify({p:S.patients,m:S.medications,i:S.inventory}))}
+function svCfg(){localStorage.setItem(LC,JSON.stringify(S.cfg))}
+
+async function loadSheets(){
+  if(!S.cfg.url)return;
+  S.sync='syncing';dot();
+  try{
+    const r=await fetch(S.cfg.url+'?action=load',{signal:AbortSignal.timeout(8000)});
+    const d=await r.json();
+    if(d&&d.p){S.patients=d.p;S.medications=d.m||[];S.inventory=d.i||[];svLocal();}
+    S.sync='synced';
+  }catch(e){S.sync='error';}
+  dot();
+}
+async function saveSheets(){
+  if(!S.cfg.url)return;
+  S.sync='syncing';dot();
+  try{
+    await fetch(S.cfg.url,{method:'POST',mode:'no-cors',body:JSON.stringify({p:S.patients,m:S.medications,i:S.inventory})});
+    S.sync='synced';
+  }catch(e){S.sync='error';}
+  dot();
+}
+function dot(){const el=document.querySelector('.sdot');if(el){el.className='sdot '+S.sync;el.title={idle:'Sin sincronizar',syncing:'Sincronizando...',synced:'Sincronizado ✓',error:'Error de sync'}[S.sync]}}
+function save(){svLocal();saveSheets()}
+
+// ══════════════════════════════════════════════════════════
+// NOTIFICATIONS
+// ══════════════════════════════════════════════════════════
+function checkNotif(){
+  if(Notification.permission!=='granted')return;
+  const a=allAlerts();if(!a.c.length&&!a.w.length)return;
+  const txt=a.c.map(x=>`${x.p}: ${x.m.drug} (${x.days}d)`).join(', ');
+  if(txt)new Notification('🔴 Botiquín — Stock urgente',{body:txt});
+}
+async function reqNotif(){const p=await Notification.requestPermission();S.cfg.notif=p==='granted';svCfg();render()}
+
+// ══════════════════════════════════════════════════════════
+// COMPUTED
+// ══════════════════════════════════════════════════════════
+const getPat=()=>S.patients.find(p=>p.id===S.sel);
+const pMeds=()=>S.medications.filter(m=>m.pid===S.sel);
+const pInv=()=>S.inventory.filter(i=>i.pid===S.sel);
+const latInv=mid=>S.inventory.filter(i=>i.mid===mid&&i.pid===S.sel).sort((a,b)=>new Date(b.date)-new Date(a.date))[0]||null;
+const critCnt=()=>pMeds().filter(m=>m.on).filter(m=>lvl(daysLeft(latInv(m.id),m))==='critical').length;
+
+function allAlerts(){
+  const c=[],w=[];
+  S.patients.forEach(pat=>{
+    S.medications.filter(m=>m.pid===pat.id&&m.on).forEach(m=>{
+      const inv=S.inventory.filter(i=>i.mid===m.id&&i.pid===pat.id).sort((a,b)=>new Date(b.date)-new Date(a.date))[0]||null;
+      const d=daysLeft(inv,m),l=lvl(d);
+      if(l==='critical')c.push({p:pat.name,m:{drug:m.drug,comm:m.comm},days:d});
+      else if(l==='warning')w.push({p:pat.name,m:{drug:m.drug,comm:m.comm},days:d});
+    });
+  });
+  return{c,w};
+}
+
+// ══════════════════════════════════════════════════════════
+// RENDER
+// ══════════════════════════════════════════════════════════
+function render(){document.getElementById('app').innerHTML=buildApp()}
+
+function buildApp(){
+  if(S.view==='loading')return'<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-size:32px">💊</div>';
+  if(S.view==='welcome')return buildWelcome();
+  if(S.view==='home')return`<div id="ai" style="display:flex;flex-direction:column;min-height:100vh">${buildHdrHome()}<div class="cnt">${buildHome()}</div></div>`;
+  if(S.view==='ajustes')return`<div id="ai" style="display:flex;flex-direction:column;min-height:100vh">${buildHdrBack('⚙️ Configuración')}<div class="cnt">${buildAjustes()}</div></div>`;
+  if(S.view==='new')return`<div id="ai" style="display:flex;flex-direction:column;min-height:100vh">${buildHdrBack('Nuevo paciente')}<div class="cnt">${buildNew()}</div></div>`;
+  return`<div id="ai" style="display:flex;flex-direction:column;min-height:100vh">${buildHdrPatient()}${buildTabs()}<div class="cnt">${buildTab()}</div></div>`;
+}
+
+function buildWelcome(){return`
+  <div style="display:flex;flex-direction:column;min-height:100vh">
+    <div class="hdr"><div class="hdr-l"><span style="font-size:20px">💊</span><span class="logo">Botiquín</span></div></div>
+    <div class="ww"><div class="wc">
+      <div style="font-size:52px;margin-bottom:12px">🏥</div>
+      <h1 style="font-size:22px;font-weight:800;margin-bottom:7px">Botiquín</h1>
+      <p style="font-size:13px;color:#6B7280;line-height:1.6;margin-bottom:5px">Seguimiento de medicación, inventario y alertas.</p>
+      <p style="font-size:12px;color:#9CA3AF;line-height:1.5;margin-bottom:24px">Historia clínica completa. Compartido entre dispositivos vía Google Sheets.</p>
+      <button class="btn bp blg" onclick="startNew()">+ Agregar primer paciente</button>
+      <p style="font-size:12px;color:#9CA3AF;margin-top:14px;cursor:pointer" onclick="goAjustes()">⚙️ Configurar Google Sheets</p>
+    </div></div>
+  </div>`
+}
+
+// Header: home screen
+function buildHdrHome(){
+  return`<div class="hdr">
+    <div class="hdr-l"><span style="font-size:19px">💊</span><span class="logo">Botiquín</span>${S.cfg.url?`<span class="sdot ${S.sync}" title="Sincronización"></span>`:''}</div>
+    <div class="hdr-r">
+      <button class="hbtn" onclick="goAjustes()">⚙️</button>
+    </div>
+  </div>`;
+}
+
+// Header: inside a patient (with back arrow + patient name)
+function buildHdrPatient(){
+  const p=getPat();
+  const cc=critCnt();
+  return`<div class="hdr">
+    <div class="hdr-l">
+      <button class="back-btn" onclick="goHome()">← Inicio</button>
+      <span style="color:rgba(255,255,255,.9);font-size:14px;font-weight:700;margin-left:2px">${esc(p?.name||'Paciente')}</span>
+      ${S.cfg.url?`<span class="sdot ${S.sync}" title="Sincronización"></span>`:''}
+    </div>
+    <div class="hdr-r">
+      <button class="hbtn" onclick="goAjustes()">⚙️</button>
+    </div>
+  </div>`;
+}
+
+// Header: back to home (for ajustes / new patient)
+function buildHdrBack(title){
+  return`<div class="hdr">
+    <div class="hdr-l">
+      <button class="back-btn" onclick="goHome()">← Inicio</button>
+      <span style="color:rgba(255,255,255,.85);font-size:14px;font-weight:600;margin-left:2px">${title}</span>
+    </div>
+  </div>`;
+}
+
+// ── HOME SCREEN ────────────────────────────────────────────
+function buildHome(){
+  // Compute alert status per patient
+  const cards=S.patients.map(pat=>{
+    const meds=S.medications.filter(m=>m.pid===pat.id&&m.on);
+    let crits=0,warns=0;
+    meds.forEach(m=>{
+      const inv=S.inventory.filter(i=>i.mid===m.id&&i.pid===pat.id).sort((a,b)=>new Date(b.date)-new Date(a.date))[0]||null;
+      const l=lvl(daysLeft(inv,m));
+      if(l==='critical')crits++;else if(l==='warning')warns++;
+    });
+    const al=crits>0?'critical':warns>0?'warning':meds.length>0?'ok':'unknown';
+    const c=SC[al];
+    const a=age(pat.dob);
+    const alertTxt=crits>0?`🔴 ${crits} crítico${crits>1?'s':''}`:warns>0?`🟡 ${warns} con stock bajo`:'✅ Todo OK';
+    const alertStyle=crits>0?`background:${SC.critical.bg};color:${SC.critical.tx}`:warns>0?`background:${SC.warning.bg};color:${SC.warning.tx}`:'background:#F0FDF4;color:#16A34A';
+    return`<button class="pat-card" onclick="enterPatient('${pat.id}')">
+      <div class="pat-card-top">
+        <div class="pat-card-bar" style="background:${c.bar}"></div>
+        <div class="pat-card-body">
+          <div class="pat-card-row">
+            <div>
+              <div class="pat-card-name">${esc(pat.name||'Sin nombre')}</div>
+              <div class="pat-card-info">${a?a+' años':''}${pat.ins?`${a?' · ':''}${esc(pat.ins)}`:''}${pat.facName?`<br>🏥 ${esc(pat.facName)}`:''}${pat.blood?` · ${pat.blood}`:''}</div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
+              <span class="pat-alert" style="${alertStyle}">${alertTxt}</span>
+              <span class="pat-card-arrow">›</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="pat-card-footer">
+        <span class="pat-stat">💊 ${meds.length} medicamento${meds.length!==1?'s':''} activo${meds.length!==1?'s':''}</span>
+        ${pat.dni?`<span class="pat-stat">· DNI ${esc(pat.dni)}</span>`:''}
+      </div>
+    </button>`;
+  }).join('');
+
+  return`
+    <div class="home-hdr">
+      <div>
+        <div class="home-title">Pacientes</div>
+        <div class="home-sub">${S.patients.length} perfil${S.patients.length!==1?'es':''} cargado${S.patients.length!==1?'s':''}</div>
+      </div>
+    </div>
+    ${cards}
+    <button class="home-add" onclick="startNew()">+ Agregar paciente</button>
+  `;
+}
+
+function buildTabs(){
+  const cc=critCnt();
+  const tabs=[{id:'perfil',lb:'👤 Perfil'},{id:'medicamentos',lb:'💊 Medicamentos'},{id:'inventario',lb:'📦 Inventario'+(cc>0?` <span class="bdg">${cc}</span>`:'')}];
+  return`<div class="tabs">${tabs.map(t=>`<button class="tbtn ${S.tab===t.id?'on':''}" onclick="setTab('${t.id}')">${t.lb}</button>`).join('')}</div>`;
+}
+
+function buildNew(){return`
+  <div class="hbx">👋 Completá los datos del paciente. Podés ir completando de a poco.</div>
+  ${buildPerfil(null)}`;
+}
+
+function buildTab(){
+  if(S.tab==='perfil')return buildPerfil(getPat());
+  if(S.tab==='medicamentos')return buildMeds();
+  if(S.tab==='inventario')return buildInv();
+  return'';
+}
+
+// ══════════════════════════════════════════════════════════
+// PERFIL TAB
+// ══════════════════════════════════════════════════════════
+function buildPerfil(p){
+  p=p||{};
+  const a=age(p.dob);
+  const bloodSel=BLOOD.map(bt=>`<option value="${bt}" ${bt===p.blood?'selected':''}>${bt}</option>`).join('');
+  return`<form id="pf" onsubmit="savePerfil(event)">
+    <div class="card">
+      <div class="ch"><span>👤</span><span class="ct">Datos personales</span></div>
+      <div class="g2">
+        <div class="cf fld"><label class="lbl">Nombre completo<span class="req">*</span></label><input class="inp" name="name" value="${esc(p.name||'')}" placeholder="Nombre y apellido" required/></div>
+        <div class="fld"><label class="lbl">Fecha de nacimiento</label><input class="inp" type="date" name="dob" value="${p.dob||''}" onchange="updAge(this)"/><div class="age-n">${a?a+' años':''}</div></div>
+        <div class="fld"><label class="lbl">DNI</label><input class="inp" name="dni" value="${esc(p.dni||'')}" placeholder="12.345.678"/></div>
+        <div class="fld"><label class="lbl">CUIL</label><input class="inp" name="cuil" value="${esc(p.cuil||'')}" placeholder="20-12345678-9"/></div>
+        <div class="fld"><label class="lbl">Vencimiento DNI</label><input class="inp" type="date" name="dniExp" value="${p.dniExp||''}"/></div>
+        <div class="fld"><label class="lbl">Teléfono</label><input class="inp" name="phone" value="${esc(p.phone||'')}" placeholder="+54 11..."/></div>
+        <div class="cf fld"><label class="lbl">Email</label><input class="inp" type="email" name="email" value="${esc(p.email||'')}" placeholder="opcional"/></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch"><span>🏥</span><span class="ct">Residencia / Centro de cuidado</span></div>
+      <div class="g2">
+        <div class="cf fld"><label class="lbl">Nombre del establecimiento</label><input class="inp" name="facName" value="${esc(p.facName||'')}" placeholder="Ej: Hogar San José"/></div>
+        <div class="cf fld"><label class="lbl">Dirección</label><input class="inp" name="facAddr" value="${esc(p.facAddr||'')}" placeholder="Calle, número, localidad"/></div>
+        <div class="fld"><label class="lbl">Teléfono</label><input class="inp" name="facPhone" value="${esc(p.facPhone||'')}" placeholder="+54..."/></div>
+        <div class="fld"><label class="lbl">Médico responsable</label><input class="inp" name="facDoc" value="${esc(p.facDoc||'')}" placeholder="Dr/Dra. Apellido"/></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch"><span>🪪</span><span class="ct">Cobertura médica</span></div>
+      <div class="g2">
+        <div class="fld"><label class="lbl">Obra social / Prepaga</label><input class="inp" name="ins" value="${esc(p.ins||'')}" placeholder="OSDE, IOMA, PAMI..."/></div>
+        <div class="fld"><label class="lbl">Plan</label><input class="inp" name="insPlan" value="${esc(p.insPlan||'')}" placeholder="Plan 210"/></div>
+        <div class="fld"><label class="lbl">Número de afiliado</label><input class="inp" name="insAff" value="${esc(p.insAff||'')}" placeholder="00-000000/00"/></div>
+        <div class="fld"><label class="lbl">Número de credencial</label><input class="inp" name="insCred" value="${esc(p.insCred||'')}" placeholder="opcional"/></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch"><span>🩺</span><span class="ct">Datos clínicos</span></div>
+      <div class="fld"><label class="lbl">Grupo sanguíneo</label><select class="sel" name="blood"><option value="">Seleccionar...</option>${bloodSel}</select></div>
+      <div class="fld"><label class="lbl">Alergias conocidas</label><div class="hint" style="margin-bottom:5px">Medicamentos, alimentos, materiales...</div><textarea class="txt" name="allergies" placeholder="Ej: Penicilina, mariscos, látex...">${esc(p.allergies||'')}</textarea></div>
+      <div class="fld"><label class="lbl">Condiciones crónicas / Diagnósticos</label><textarea class="txt" name="chronic" placeholder="Ej: Diabetes tipo 2, hipertensión...">${esc(p.chronic||'')}</textarea></div>
+      <div class="fld"><label class="lbl">Medicamentos contraindicados</label><div class="hint" style="margin-bottom:5px">Que NO debe tomar bajo ninguna circunstancia</div><textarea class="txt" name="contras" placeholder="opcional">${esc(p.contras||'')}</textarea></div>
+    </div>
+    <div class="card">
+      <div class="ch"><span>🚨</span><span class="ct">Contacto de emergencia</span></div>
+      <div class="g2">
+        <div class="fld"><label class="lbl">Nombre</label><input class="inp" name="emName" value="${esc(p.emName||'')}" placeholder="Nombre completo"/></div>
+        <div class="fld"><label class="lbl">Relación</label><input class="inp" name="emRel" value="${esc(p.emRel||'')}" placeholder="Hijo/a, cónyuge..."/></div>
+        <div class="cf fld"><label class="lbl">Teléfono</label><input class="inp" name="emPhone" value="${esc(p.emPhone||'')}" placeholder="+54 11..."/></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch"><span>📝</span><span class="ct">Notas generales</span></div>
+      <div class="fld"><textarea class="txt" name="notes" style="min-height:85px" placeholder="Observaciones, preferencias, indicaciones especiales...">${esc(p.notes||'')}</textarea></div>
+    </div>
+    <div class="sr2"><button type="submit" class="btn bp blg">💾 Guardar perfil</button></div>
+  </form>`;
+}
+
+// ══════════════════════════════════════════════════════════
+// MEDICAMENTOS TAB
+// ══════════════════════════════════════════════════════════
+function buildMeds(){
+  const ms=pMeds(),act=ms.filter(m=>m.on),arc=ms.filter(m=>!m.on);
+  return`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px">
+    <div><h2 style="font-size:17px;font-weight:700">Medicamentos</h2><p style="font-size:12px;color:#6B7280;margin-top:2px">${act.length} activo${act.length!==1?'s':''}</p></div>
+    <button class="btn bp bsm" onclick="openMedMdl(null)">+ Agregar</button>
+  </div>
+  ${act.length===0?`<div class="emp"><div class="ei">💊</div><p class="et">Sin medicamentos cargados</p><p class="es">Agregá los medicamentos del paciente</p><button class="btn bp bsm" onclick="openMedMdl(null)">+ Agregar medicamento</button></div>`:act.map(m=>mCard(m)).join('')}
+  ${arc.length>0?`<details style="margin-top:8px"><summary style="font-size:12px;color:#9CA3AF">${arc.length} archivado${arc.length>1?'s':''}</summary><div style="margin-top:8px;opacity:.6">${arc.map(m=>mCard(m)).join('')}</div></details>`:``}`;
+}
+
+function mCard(m){return`<div class="mc ${m.on?'':'arc'}">
+  <div class="mi" style="${m.on?'':'background:#F3F4F6'}">💊</div>
+  <div style="flex:1">
+    <div class="mn">${esc(m.drug)}${!m.on?'<span class="arc-bdg">ARCHIVADO</span>':''}${m.comm?`<span style="font-size:12px;font-weight:400;color:#6B7280;margin-left:5px">(${esc(m.comm)})</span>`:''}</div>
+    <div class="ms">${m.dose} ${m.unit}/día · ${esc(m.freq)}${m.doc?` · Dr. ${esc(m.doc)}`:''}</div>
+    ${m.notes?`<div style="font-size:11px;color:#9CA3AF;font-style:italic;margin-top:2px">${esc(m.notes)}</div>`:''}
+  </div>
+  <div class="ma">
+    <button class="ib" onclick="togMed('${m.id}')" title="${m.on?'Archivar':'Reactivar'}">${m.on?'📦':'↩'}</button>
+    <button class="ib" onclick="openMedMdl('${m.id}')">✏️</button>
+    <button class="ib d" onclick="delMedCfm('${m.id}')">🗑</button>
+  </div>
+</div>`}
+
+// ══════════════════════════════════════════════════════════
+// INVENTARIO TAB
+// ══════════════════════════════════════════════════════════
+function buildInv(){
+  const ms=pMeds().filter(m=>m.on);
+  const alerts=ms.map(m=>{const inv=latInv(m.id),d=daysLeft(inv,m),l=lvl(d);return{m,inv,d,l}}).filter(a=>a.l==='critical'||a.l==='warning').sort((a,b)=>(a.d??999)-(b.d??999));
+  const hasCrit=alerts.some(a=>a.l==='critical');
+  const aHtml=alerts.length===0?'':` 
+    <div class="ab ${hasCrit?'cr':'w'}">
+      <div class="at ${hasCrit?'cr':'w'}">${hasCrit?'🔴 Medicación por agotarse':'🟡 Stock bajo — comprá pronto'}</div>
+      ${alerts.map(a=>`<div class="ae"><strong>${esc(a.m.drug)}</strong>${a.m.comm?` (${esc(a.m.comm)})`:''}<span style="color:${SC[a.l].tx};font-weight:700;margin-left:8px">${a.d===0?'¡Sin stock!':a.d+' días'}</span></div>`).join('')}
+      <div class="aa">
+        <button class="btn bwa" onclick="sWA()">📱 WhatsApp</button>
+        <button class="btn bml" onclick="sMail()">✉️ Email</button>
+      </div>
+    </div>`;
+  if(ms.length===0)return`<div class="emp"><div class="ei">📦</div><p class="et">Sin medicamentos activos</p><p class="es">Agregá medicamentos en la pestaña correspondiente</p><button class="btn bp bsm" onclick="setTab('medicamentos')">Ir a Medicamentos</button></div>`;
+  return aHtml+ms.map(m=>invCard(m)).join('');
+}
+
+function invCard(m){
+  const inv=latInv(m.id),d=daysLeft(inv,m),l=lvl(d),c=SC[l];
+  const pct=d==null?0:Math.min(100,Math.max(2,(d/30)*100));
+  const ro=d!=null&&d>0?addD(today(),d):null;
+  const bb=d!=null?addD(today(),Math.max(0,d-5)):null;
+  const hist=S.inventory.filter(i=>i.mid===m.id&&i.pid===S.sel).sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5);
+  return`<div class="ic" style="border:1px solid ${c.bd}">
+    <div class="istr" style="background:${c.bar}"></div>
+    <div class="ibdy">
+      <div class="itop">
+        <div>
+          <div style="font-weight:700;font-size:15px">${esc(m.drug)}</div>
+          ${m.comm?`<div style="font-size:12px;color:#6B7280">${esc(m.comm)}</div>`:''}
+          <div style="font-size:11px;color:#9CA3AF;margin-top:2px">${m.dose} ${m.unit}/día · ${esc(m.freq)}</div>
+        </div>
+        <span class="stag" style="background:${c.bg};color:${c.tx};border:1px solid ${c.bd}">${c.lbl}</span>
+      </div>
+      <div class="crow">
+        <span class="clbl">Días restantes</span>
+        <div class="ctrk"><div class="cfil" style="width:${pct}%;background:${c.bar}"></div></div>
+        <span class="cday" style="color:${c.tx}">${d==null?'?':d+'d'}</span>
+      </div>
+      <div class="igrd">
+        <div class="ibox"><div class="ilbl">Última entrega</div><div class="ival">${inv?fmt(inv.date):'Sin datos'}</div></div>
+        <div class="ibox ${l==='critical'?'cr':l==='warning'?'w':''}"><div class="ilbl">Se agota el</div><div class="ival ${l==='critical'?'cr':l==='warning'?'w':''}">${ro?fmt(ro):'—'}</div></div>
+        <div class="ibox ${l!=='ok'?l==='critical'?'cr':'w':''}"><div class="ilbl">Comprar antes del</div><div class="ival ${l!=='ok'?'w':''}">${bb&&inv?fmt(bb):'—'}</div></div>
+      </div>
+      ${hist.length>0?`<details style="margin-bottom:9px"><summary>Historial de entregas</summary>${hist.map((h,i)=>`<div class="hr"><span class="hrd">${fmt(h.date)}</span><span>${h.qty} ${m.unit}</span>${h.notes?`<span style="color:#9CA3AF">· ${esc(h.notes)}</span>`:''}<span class="hrl">${i===0?'← última':''}</span></div>`).join('')}</details>`:''}
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn bp bsm" onclick="openDelMdl('${m.id}')">📦 Registrar entrega</button>
+        ${inv?`<button class="btn bs bsm" onclick="openStkMdl('${m.id}','${inv.id}')">🔄 Actualizar stock</button>`:''}
+      </div>
+    </div>
+  </div>`;
+}
+
+// ══════════════════════════════════════════════════════════
+// AJUSTES TAB
+// ══════════════════════════════════════════════════════════
+function buildAjustes(){
+  const np=Notification.permission;
+  return`<h2 style="font-size:17px;font-weight:700;margin-bottom:13px">⚙️ Configuración</h2>
+  <div class="card">
+    <div class="ch"><span>📊</span><span class="ct">Google Sheets — datos compartidos</span></div>
+    <p style="font-size:13px;color:#6B7280;line-height:1.5;margin-bottom:13px">Conectá a tu Google Sheet para sincronizar entre dispositivos y compartir con otras personas.</p>
+    <div class="fld"><label class="lbl">URL del Apps Script</label>
+      <input class="inp" id="cu" value="${esc(S.cfg.url)}" placeholder="https://script.google.com/macros/s/.../exec"/>
+      <div class="hint">Pegá la URL del Web App. <span style="color:var(--p);cursor:pointer;font-weight:600" onclick="openSetupGuide()">Ver instrucciones paso a paso →</span></div>
+    </div>
+    <div class="fld"><label class="lbl">Email para alertas</label>
+      <input class="inp" id="ce" value="${esc(S.cfg.email)}" placeholder="tu@email.com"/>
+      <div class="hint">Recibís email automático cuando hay medicación crítica (requiere trigger en Apps Script)</div>
+    </div>
+    <div class="fld"><label class="lbl">Email adicional (opcional)</label>
+      <input class="inp" id="ce2" value="${esc(S.cfg.email2||'')}" placeholder="otra@persona.com"/></div>
+    <div style="display:flex;gap:7px;flex-wrap:wrap">
+      <button class="btn bp bsm" onclick="saveCfgForm()">Guardar y conectar</button>
+      ${S.cfg.url?`<button class="btn bs bsm" onclick="testConn()">🔄 Probar conexión</button>`:''}
+    </div>
+  </div>
+  <div class="card">
+    <div class="ch"><span>🔔</span><span class="ct">Notificaciones del navegador</span></div>
+    <p style="font-size:13px;color:#6B7280;line-height:1.5;margin-bottom:11px">Alertas mientras tenés la app abierta. Para alertas automáticas aunque esté cerrada, configurá el trigger en Apps Script.</p>
+    ${np==='granted'?`<div style="font-size:13px;color:#16A34A;font-weight:600;margin-bottom:8px">✅ Notificaciones activadas</div><button class="btn bs bsm" onclick="checkNotif()">🔔 Probar notificación</button>`:np==='denied'?`<div style="font-size:13px;color:#DC2626">❌ Bloqueadas. Habilitá los permisos en el navegador.</div>`:`<button class="btn bp bsm" onclick="reqNotif()">🔔 Activar notificaciones</button>`}
+  </div>
+  <div class="card">
+    <div class="ch"><span>🤖</span><span class="ct">Alertas automáticas por email</span></div>
+    <p style="font-size:13px;color:#6B7280;line-height:1.6;margin-bottom:9px">Una vez configurado el Apps Script, activá el email automático diario:</p>
+    <ol style="font-size:13px;color:#374151;line-height:2;padding-left:17px">
+      <li>Abrí <a href="https://script.google.com" target="_blank" style="color:var(--p)">script.google.com</a> → tu proyecto</li>
+      <li>Menú "Disparadores" (reloj) → "+ Agregar disparador"</li>
+      <li>Función: <code style="background:#F3F4F6;padding:1px 5px;border-radius:4px;font-size:12px">checkAlertsAndEmail</code></li>
+      <li>Tipo de evento: Temporizador → Diariamente → elegí hora</li>
+      <li>Guardá y autorizá — listo, corre solo</li>
+    </ol>
+    <p style="font-size:11px;color:#9CA3AF;margin-top:8px">100% gratuito. Solo manda email si hay medicación crítica o baja.</p>
+  </div>
+  <div class="card">
+    <div class="ch"><span>📱</span><span class="ct">Instalar en el celular</span></div>
+    <p style="font-size:13px;color:#6B7280;line-height:1.8">
+      <strong>iPhone (Safari):</strong> Botón compartir → "Agregar a pantalla de inicio"<br>
+      <strong>Android (Chrome):</strong> Menú ⋮ → "Añadir a pantalla de inicio"<br>
+      La app funciona offline y guarda los datos localmente.
+    </p>
+  </div>`;
+}
+
+// ══════════════════════════════════════════════════════════
+// MODALS
+// ══════════════════════════════════════════════════════════
+function openMdl(html){
+  let o=document.getElementById('mo');
+  if(!o){o=document.createElement('div');o.id='mo';o.className='ovl';o.onclick=e=>{if(e.target===o)closeMdl()};document.body.appendChild(o);}
+  o.innerHTML=`<div class="mdl">${html}</div>`;o.style.display='flex';
+}
+function closeMdl(){const o=document.getElementById('mo');if(o)o.style.display='none'}
+
+function openMedMdl(mid){
+  const m=mid?S.medications.find(x=>x.id===mid):null;
+  const uOpts=UNITS.map(u=>`<option value="${u}" ${u===(m?.unit||'comprimidos')?'selected':''}>${u}</option>`).join('');
+  const fOpts=FREQS.map(f=>`<option value="${f}" ${f===(m?.freq||'1 vez al día')?'selected':''}>${f}</option>`).join('');
+  openMdl(`
+    <div class="mhdr"><span class="mtl">${m?'Editar':'Agregar'} medicamento</span><button class="mcl" onclick="closeMdl()">×</button></div>
+    <div class="mbdy">
+      <div class="fld"><label class="lbl">Nombre de la droga<span class="req">*</span></label><input class="inp" id="md" value="${esc(m?.drug||'')}" placeholder="Ej: Enalapril, Levotiroxina..."/></div>
+      <div class="fld"><label class="lbl">Nombre comercial</label><div class="hint" style="margin-bottom:5px">Marca específica recomendada</div><input class="inp" id="mc" value="${esc(m?.comm||'')}" placeholder="Ej: Lotrial, Eutirox..."/></div>
+      <div class="g2">
+        <div class="fld"><label class="lbl">Dosis diaria<span class="req">*</span></label><input class="inp" id="mdose" type="number" min="0" step="0.5" value="${m?.dose||''}"/></div>
+        <div class="fld"><label class="lbl">Unidad</label><select class="sel" id="mu">${uOpts}</select></div>
+      </div>
+      <div class="fld"><label class="lbl">Frecuencia</label><select class="sel" id="mf">${fOpts}</select></div>
+      <div class="fld"><label class="lbl">Prescripto por</label><input class="inp" id="mdoc" value="${esc(m?.doc||'')}" placeholder="Dr/Dra. Apellido"/></div>
+      <div class="fld"><label class="lbl">Notas</label><textarea class="txt" id="mn" placeholder="Con comida, instrucciones especiales...">${esc(m?.notes||'')}</textarea></div>
+      <div class="mft">
+        <button class="btn bs" onclick="closeMdl()">Cancelar</button>
+        <button class="btn bp" onclick="saveMed('${mid||''}')">${m?'Guardar cambios':'Agregar'}</button>
+      </div>
+    </div>`);
+}
+
+function openDelMdl(mid){
+  const m=S.medications.find(x=>x.id===mid);if(!m)return;
+  openMdl(`
+    <div class="mhdr"><span class="mtl">Registrar entrega</span><button class="mcl" onclick="closeMdl()">×</button></div>
+    <div class="mbdy">
+      <div class="hbx">💊 ${esc(m.drug)}${m.comm?` (${esc(m.comm)})`:''}  ·  ${m.dose} ${m.unit}/día</div>
+      <div class="fld"><label class="lbl">Fecha de entrega<span class="req">*</span></label><input class="inp" id="dd" type="date" value="${today()}"/></div>
+      <div class="fld"><label class="lbl">Cantidad entregada (${m.unit})<span class="req">*</span></label>
+        <input class="inp" id="dq" type="number" min="0" step="1" oninput="updDH(this,'${m.dose}','${m.unit}')"/>
+        <div class="hint" id="dh">Ingresá la cantidad para ver cuántos días cubre</div>
+      </div>
+      <div class="fld"><label class="lbl">Notas</label><textarea class="txt" id="dn" placeholder="Farmacia, lote, observaciones..."></textarea></div>
+      <div class="mft">
+        <button class="btn bs" onclick="closeMdl()">Cancelar</button>
+        <button class="btn bp" onclick="saveDelivery('${mid}')">Registrar</button>
+      </div>
+    </div>`);
+}
+
+function openStkMdl(mid,iid){
+  const m=S.medications.find(x=>x.id===mid),inv=S.inventory.find(x=>x.id===iid);if(!m||!inv)return;
+  const est=inv.rem!=null?inv.rem:Math.max(0,inv.qty-since(inv.date)*parseFloat(m.dose));
+  openMdl(`
+    <div class="mhdr"><span class="mtl">Actualizar stock</span><button class="mcl" onclick="closeMdl()">×</button></div>
+    <div class="mbdy">
+      <p style="font-size:13px;color:#6B7280;margin-bottom:13px">Ingresá cuántas unidades quedan físicamente ahora mismo.</p>
+      <div class="fld"><label class="lbl">${esc(m.drug)} — ${m.unit} restantes</label>
+        <input class="inp" id="sr" type="number" min="0" step="0.5" value="${Math.round(est)}" oninput="updSH(this,'${m.dose}')"/>
+        <div class="fnote" id="sh">${Math.round(est/parseFloat(m.dose))} días estimados</div>
+      </div>
+      <div class="mft">
+        <button class="btn bs" onclick="closeMdl()">Cancelar</button>
+        <button class="btn bp" onclick="saveStock('${iid}')">Actualizar</button>
+      </div>
+    </div>`);
+}
+
+function delMedCfm(mid){
+  const m=S.medications.find(x=>x.id===mid);if(!m)return;
+  openMdl(`
+    <div class="mhdr"><span class="mtl">¿Eliminar medicamento?</span><button class="mcl" onclick="closeMdl()">×</button></div>
+    <div class="mbdy">
+      <p style="font-size:14px;color:#374151;line-height:1.5;margin-bottom:15px">¿Seguro que querés eliminar <strong>${esc(m.drug)}</strong>?<br><span style="font-size:12px;color:#9CA3AF">También se elimina el historial de inventario. No se puede deshacer.</span></p>
+      <div class="mft"><button class="btn bs" onclick="closeMdl()">Cancelar</button><button class="btn bd" onclick="delMed('${mid}')">Eliminar</button></div>
+    </div>`);
+}
+
+const AS_CODE=`function doGet(e) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName('Data');
+  if (!sh) return out('{}');
+  return out(sh.getRange('A1').getValue() || '{}');
+}
+
+function doPost(e) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName('Data') || ss.insertSheet('Data');
+  sh.getRange('A1').setValue(e.postData.contents);
+  return out('{"ok":true}');
+}
+
+function out(s) {
+  return ContentService.createTextOutput(s)
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function checkAlertsAndEmail() {
+  var props = PropertiesService.getScriptProperties();
+  var email = props.getProperty('ALERT_EMAIL');
+  if (!email) return;
+  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Data');
+  if (!sh) return;
+  var raw = sh.getRange('A1').getValue();
+  if (!raw) return;
+  var data = JSON.parse(raw);
+  var pats = data.p || [], meds = data.m || [], inv = data.i || [];
+  var crits = [], warns = [];
+  pats.forEach(function(pat) {
+    meds.filter(function(m){ return m.pid===pat.id && m.on; })
+      .forEach(function(m) {
+        var entry = inv.filter(function(i){ return i.mid===m.id&&i.pid===pat.id; })
+          .sort(function(a,b){ return new Date(b.date)-new Date(a.date); })[0];
+        var d = dLeft(entry, m);
+        if (d !== null && d <= 4)
+          crits.push(pat.name+': '+m.drug+' ('+d+' días)');
+        else if (d !== null && d <= 10)
+          warns.push(pat.name+': '+m.drug+' ('+d+' días)');
+      });
+  });
+  if (!crits.length && !warns.length) return;
+  var body = 'Resumen de medicación:\\n\\n';
+  if (crits.length) body += '🔴 URGENTE - Menos de 5 días:\\n' + crits.map(function(s){return'• '+s}).join('\\n') + '\\n\\n';
+  if (warns.length) body += '🟡 Comprar pronto - Menos de 10 días:\\n' + warns.map(function(s){return'• '+s}).join('\\n');
+  var subj = crits.length ? '🔴 Botiquín: Medicación urgente' : '🟡 Botiquín: Stock bajo';
+  MailApp.sendEmail(email, subj, body);
+  var em2 = props.getProperty('ALERT_EMAIL_2');
+  if (em2) MailApp.sendEmail(em2, subj, body);
+}
+
+function dLeft(inv, med) {
+  if (!inv || !med || !parseFloat(med.dose)) return null;
+  var s = Math.floor((Date.now()-new Date(inv.date).getTime())/86400000);
+  var r = inv.rem != null ? inv.rem : inv.qty - s * parseFloat(med.dose);
+  return Math.max(0, Math.round(r / parseFloat(med.dose)));
+}`;
+
+function openSetupGuide(){
+  const cEsc=AS_CODE.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  openMdl(`
+    <div class="mhdr"><span class="mtl">Configurar Google Sheets</span><button class="mcl" onclick="closeMdl()">×</button></div>
+    <div class="mbdy" style="max-height:75vh;overflow-y:auto">
+      <p style="font-size:13px;color:#6B7280;margin-bottom:13px">Hacés esto una sola vez. Después todo funciona automático.</p>
+      <div class="ss"><div class="sr"><div class="snum">1</div><div><div style="font-weight:700;font-size:14px;margin-bottom:3px">Creá un Google Sheet</div><p style="font-size:12px;color:#6B7280">Abrí <a href="https://sheets.google.com" target="_blank" style="color:var(--p)">sheets.google.com</a> y creá una hoja nueva. El nombre no importa.</p></div></div></div>
+      <div class="ss"><div class="sr"><div class="snum">2</div><div style="width:100%"><div style="font-weight:700;font-size:14px;margin-bottom:3px">Abrí Apps Script</div><p style="font-size:12px;color:#6B7280;margin-bottom:6px">En el Sheet: <strong>Extensiones → Apps Script</strong>. Borrá todo y pegá este código:</p>
+        <div class="cb" id="ascode">${cEsc}<button class="cpcb" onclick="cpCode()">Copiar</button></div>
+      </div></div></div>
+      <div class="ss"><div class="sr"><div class="snum">3</div><div><div style="font-weight:700;font-size:14px;margin-bottom:3px">Configurá los emails</div><p style="font-size:12px;color:#6B7280">En Apps Script: <strong>Configuración del proyecto → Propiedades del script</strong> → Agregar:<br><code style="background:#F3F4F6;padding:1px 4px;border-radius:3px;font-size:11px">ALERT_EMAIL = tu@email.com</code><br><code style="background:#F3F4F6;padding:1px 4px;border-radius:3px;font-size:11px">ALERT_EMAIL_2 = sebastian@email.com</code> (opcional)</p></div></div></div>
+      <div class="ss"><div class="sr"><div class="snum">4</div><div><div style="font-weight:700;font-size:14px;margin-bottom:3px">Deploy como Web App</div><p style="font-size:12px;color:#6B7280"><strong>Implementar → Nueva implementación → Web App</strong><br>"Ejecutar como": <strong>Yo</strong><br>"Acceso": <strong>Cualquier persona</strong><br>→ Implementar → Autorizá → Copiá la URL</p></div></div></div>
+      <div class="ss"><div class="sr"><div class="snum">5</div><div><div style="font-weight:700;font-size:14px;margin-bottom:3px">Pegá la URL en Botiquín</div><p style="font-size:12px;color:#6B7280">Volvé a la pestaña ⚙️ Config y pegá la URL del Web App.</p></div></div></div>
+      <button class="btn bp" style="width:100%;margin-top:4px" onclick="closeMdl()">Entendido</button>
+    </div>`);
+}
+
+function cpCode(){navigator.clipboard.writeText(AS_CODE).then(()=>toast('Código copiado ✓')).catch(()=>toast('Seleccioná el texto manualmente'))}
+
+// ══════════════════════════════════════════════════════════
+// ACTIONS
+// ══════════════════════════════════════════════════════════
+function setTab(id){S.tab=id;render()}
+function setTab2(id){S.tab=id;render()}
+function selPat(id){S.sel=id;S.tab='perfil';S.view='patient';render()}
+function enterPatient(id){S.sel=id;S.tab='perfil';S.view='patient';render()}
+function goHome(){S.view='home';render()}
+function goAjustes(){S.view='ajustes';render()}
+function startNew(){S.view='new';render()}
+function showMain(){S.view='home';render()}
+
+function updAge(inp){const a=age(inp.value);const n=inp.parentElement.querySelector('.age-n');if(n)n.textContent=a?a+' años':''}
+
+function savePerfil(e){
+  e.preventDefault();
+  const fd={};new FormData(e.target).forEach((v,k)=>fd[k]=v.trim());
+  if(S.view==='new'){const np={...fd,id:uid()};S.patients.push(np);S.sel=np.id;S.view='patient';S.tab='medicamentos';toast('Paciente creado ✓');}
+  else{S.patients=S.patients.map(p=>p.id===S.sel?{...p,...fd}:p);toast('Perfil guardado ✓');}
+  save();render();
+}
+
+function saveMed(mid){
+  const drug=document.getElementById('md')?.value.trim();
+  const dose=document.getElementById('mdose')?.value;
+  if(!drug){toast('Ingresá el nombre de la droga');return}
+  if(!dose){toast('Ingresá la dosis diaria');return}
+  const med={drug,dose:parseFloat(dose),comm:document.getElementById('mc')?.value.trim(),unit:document.getElementById('mu')?.value,freq:document.getElementById('mf')?.value,doc:document.getElementById('mdoc')?.value.trim(),notes:document.getElementById('mn')?.value.trim(),on:true};
+  if(mid){S.medications=S.medications.map(m=>m.id===mid?{...m,...med}:m);toast('Medicamento actualizado ✓');}
+  else{S.medications.push({...med,id:uid(),pid:S.sel});toast('Medicamento agregado ✓');}
+  closeMdl();save();render();
+}
+
+function togMed(mid){S.medications=S.medications.map(m=>m.id===mid?{...m,on:!m.on}:m);save();render()}
+
+function delMed(mid){S.medications=S.medications.filter(m=>m.id!==mid);S.inventory=S.inventory.filter(i=>i.mid!==mid);closeMdl();save();render();toast('Medicamento eliminado')}
+
+function updDH(inp,dose,unit){const d=Math.round(parseFloat(inp.value)/parseFloat(dose));const h=document.getElementById('dh');if(h)h.textContent=isNaN(d)?'':('Cubre ~'+d+' días a '+dose+' '+unit+'/día')}
+function updSH(inp,dose){const d=Math.round(parseFloat(inp.value)/parseFloat(dose));const h=document.getElementById('sh');if(h)h.textContent=isNaN(d)?'':(d+' días estimados')}
+
+function saveDelivery(mid){
+  const dt=document.getElementById('dd')?.value,qty=document.getElementById('dq')?.value;
+  if(!dt||!qty){toast('Completá fecha y cantidad');return}
+  S.inventory.push({id:uid(),pid:S.sel,mid,date:dt,qty:parseFloat(qty),rem:null,notes:document.getElementById('dn')?.value.trim()});
+  closeMdl();save();render();toast('Entrega registrada ✓');
+}
+
+function saveStock(iid){
+  const r=parseFloat(document.getElementById('sr')?.value);
+  if(isNaN(r)){toast('Ingresá una cantidad válida');return}
+  S.inventory=S.inventory.map(i=>i.id===iid?{...i,rem:r,upd:today()}:i);
+  closeMdl();save();render();toast('Stock actualizado ✓');
+}
+
+function saveCfgForm(){
+  S.cfg.url=document.getElementById('cu')?.value.trim()||'';
+  S.cfg.email=document.getElementById('ce')?.value.trim()||'';
+  S.cfg.email2=document.getElementById('ce2')?.value.trim()||'';
+  svCfg();toast('Configuración guardada ✓');
+  if(S.cfg.url)loadSheets().then(()=>{if(S.patients.length>0&&!S.sel)S.sel=S.patients[0].id;render()});
+  else render();
+}
+
+async function testConn(){toast('Probando conexión...');await loadSheets();toast(S.sync==='synced'?'✅ Conexión OK — datos cargados':'❌ Error al conectar. Revisá la URL.');render()}
+
+function sWA(){
+  const p=getPat();
+  const alerts=pMeds().filter(m=>m.on).map(m=>{const inv=latInv(m.id),d=daysLeft(inv,m),l=lvl(d);return{m,d,l}}).filter(a=>a.l==='critical'||a.l==='warning').sort((a,b)=>(a.d??999)-(b.d??999));
+  let msg='💊 *Medicación de '+( p?.name||'el paciente')+'*\n\n';
+  const c=alerts.filter(a=>a.l==='critical'),w=alerts.filter(a=>a.l==='warning');
+  if(c.length){msg+='🔴 *URGENTE:*\n';c.forEach(a=>{msg+='• '+a.m.drug+(a.m.comm?' ('+a.m.comm+')':'')+': '+a.d+' días\n';});msg+='\n';}
+  if(w.length){msg+='🟡 *Comprar pronto:*\n';w.forEach(a=>{msg+='• '+a.m.drug+(a.m.comm?' ('+a.m.comm+')':'')+': '+a.d+' días\n';});}
+  msg+='\n_'+fmt(today())+'_';
+  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+}
+
+function sMail(){
+  const p=getPat();
+  const alerts=pMeds().filter(m=>m.on).map(m=>{const inv=latInv(m.id),d=daysLeft(inv,m),l=lvl(d);return{m,d,l}}).filter(a=>a.l!=='ok'&&a.l!=='unknown');
+  let body='Medicación de '+(p?.name||'el paciente')+':\n\n';
+  alerts.forEach(a=>body+='- '+a.m.drug+': '+a.d+' días\n');
+  window.location.href='mailto:'+S.cfg.email+'?subject='+encodeURIComponent('Medicación de '+(p?.name||'el paciente'))+'&body='+encodeURIComponent(body);
+}
+
+// ══════════════════════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════════════════════
+let tt;
+function toast(msg){
+  clearTimeout(tt);
+  let t=document.querySelector('.tst');
+  if(!t){t=document.createElement('div');t.className='tst';document.body.appendChild(t);}
+  t.textContent=msg;t.style.opacity='1';
+  tt=setTimeout(()=>t.style.opacity='0',2300);
+}
+
+// ══════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════
+async function init(){
+  ldLocal();
+  if(S.patients.length>0){S.view='home';}
+  else S.view='welcome';
+  render();
+  if(S.cfg.url){
+    await loadSheets();
+    if(S.patients.length>0){S.view='home';render();}
+  }
+  setTimeout(checkNotif,3000);
+  setInterval(checkNotif,3600000);
+}
+init();
+</script>
+</body>
+</html>
