@@ -695,7 +695,7 @@ function invCard(m){
   const pct=d==null?0:Math.min(100,Math.max(2,(d/30)*100));
   const ro=d!=null&&d>0?addD(today(),d):null;
   const bb=d!=null?addD(today(),Math.max(0,d-5)):null;
-  const hist=S.inventory.filter(i=>i.mid===m.id&&i.pid===S.sel).sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5);
+  const hist=S.inventory.filter(i=>i.mid===m.id&&i.pid===S.sel).sort((a,b)=>new Date(b.date)-new Date(a.date));
   return`<div class="ic" id="ic-${m.id}" style="border:1px solid ${c.bd}">
     <div class="istr" style="background:${c.bar}"></div>
     <div class="ibdy">
@@ -717,7 +717,7 @@ function invCard(m){
         <div class="ibox ${l==='critical'?'cr':l==='warning'?'w':''}"><div class="ilbl">Se agota el</div><div class="ival ${l==='critical'?'cr':l==='warning'?'w':''}">${ro?fmt(ro):'—'}</div></div>
         <div class="ibox ${l!=='ok'?l==='critical'?'cr':'w':''}"><div class="ilbl">Comprar antes del</div><div class="ival ${l!=='ok'?'w':''}">${bb&&inv?fmt(bb):'—'}</div></div>
       </div>
-      ${hist.length>0?`<details style="margin-bottom:9px"><summary>Historial de entregas</summary>${hist.map((h,i)=>`<div class="hr"><span class="hrd">${fmt(h.date)}</span><span>${h.qty} ${m.unit}</span>${h.notes?`<span style="color:#9CA3AF">· ${esc(h.notes)}</span>`:''}<span class="hrl">${i===0?'← última':''}</span></div>`).join('')}</details>`:''}
+      ${hist.length>0?`<details style="margin-bottom:9px"><summary>Historial de entregas (${hist.length})</summary><div style="margin-top:6px">${hist.map((h,i)=>`<div class="hr" style="align-items:center"><span class="hrd">${fmt(h.date)}</span><span>${h.qty} ${m.unit}</span>${h.notes?`<span style="color:#9CA3AF;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">· ${esc(h.notes)}</span>`:'<span style="flex:1"></span>'}<div style="display:flex;gap:3px;flex-shrink:0">${i===0?`<span class="hrl" style="font-size:10px;margin-right:4px">última</span>`:''}<button class="ib" style="padding:3px 7px;font-size:11px" onclick="openEditDelivery('${h.id}','${m.id}')">✏️</button><button class="ib d" style="padding:3px 7px;font-size:11px" onclick="confirmDelDelivery('${h.id}')">🗑</button></div></div>`).join('')}</div></details>`:''}
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="btn bp bsm" onclick="openDelMdl('${m.id}')">📦 Registrar entrega</button>
         ${inv?`<button class="btn bs bsm" onclick="openStkMdl('${m.id}','${inv.id}')">🔄 Actualizar stock</button>`:''}
@@ -987,6 +987,54 @@ function saveStock(iid){
   if(isNaN(r)){toast('Ingresá una cantidad válida');return}
   S.inventory=S.inventory.map(i=>i.id===iid?{...i,rem:r,upd:today()}:i);
   closeMdl();save();render();toast('Stock actualizado ✓');
+}
+
+function openEditDelivery(iid,mid){
+  const h=S.inventory.find(i=>i.id===iid);
+  const m=S.medications.find(x=>x.id===mid);
+  if(!h||!m)return;
+  openMdl(`
+    <div class="mhdr"><span class="mtl">Editar entrega</span><button class="mcl" onclick="closeMdl()">×</button></div>
+    <div class="mbdy">
+      <div class="hbx" style="margin-bottom:14px">💊 ${esc(m.drug)}${m.comm?` (${esc(m.comm)})`:''}</div>
+      <div class="fld"><label class="lbl">Fecha de entrega<span class="req">*</span></label><input class="inp" id="ed-date" type="date" value="${h.date}"/></div>
+      <div class="fld"><label class="lbl">Cantidad entregada (${m.unit})<span class="req">*</span></label>
+        <input class="inp" id="ed-qty" type="number" min="0" step="1" value="${h.qty}" oninput="updDH(this,'${m.dose}','${m.unit}')"/>
+        <div class="hint" id="dh">Cubre ~${Math.round(h.qty/parseFloat(m.dose))} días a ${m.dose} ${m.unit}/día</div>
+      </div>
+      <div class="fld"><label class="lbl">Notas</label><textarea class="txt" id="ed-notes">${esc(h.notes||'')}</textarea></div>
+      <div class="mft">
+        <button class="btn bs" onclick="closeMdl()">Cancelar</button>
+        <button class="btn bp" onclick="saveEditDelivery('${iid}')">Guardar cambios</button>
+      </div>
+    </div>`);
+}
+
+function saveEditDelivery(iid){
+  const dt=document.getElementById('ed-date')?.value;
+  const qty=document.getElementById('ed-qty')?.value;
+  if(!dt||!qty){toast('Completá fecha y cantidad');return}
+  S.inventory=S.inventory.map(i=>i.id===iid?{...i,date:dt,qty:parseFloat(qty),notes:document.getElementById('ed-notes')?.value.trim()}:i);
+  closeMdl();save();render();toast('Entrega actualizada ✓');
+}
+
+function confirmDelDelivery(iid){
+  const h=S.inventory.find(i=>i.id===iid);
+  if(!h)return;
+  openMdl(`
+    <div class="mhdr"><span class="mtl">¿Eliminar entrega?</span><button class="mcl" onclick="closeMdl()">×</button></div>
+    <div class="mbdy">
+      <p style="font-size:14px;color:#374151;line-height:1.5;margin-bottom:16px">¿Eliminás la entrega del <strong>${fmt(h.date)}</strong> (${h.qty} unidades)?<br><span style="font-size:12px;color:#9CA3AF">No se puede deshacer.</span></p>
+      <div class="mft">
+        <button class="btn bs" onclick="closeMdl()">Cancelar</button>
+        <button class="btn bd" onclick="deleteDelivery('${iid}')">Eliminar</button>
+      </div>
+    </div>`);
+}
+
+function deleteDelivery(iid){
+  S.inventory=S.inventory.filter(i=>i.id!==iid);
+  closeMdl();save();render();toast('Entrega eliminada');
 }
 
 function saveCfgForm(){
